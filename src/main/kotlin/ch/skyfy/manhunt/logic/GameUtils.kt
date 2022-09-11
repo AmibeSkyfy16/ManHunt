@@ -13,6 +13,7 @@ import java.util.stream.StreamSupport
 object GameUtils {
 
     fun isNotStarted(): Boolean = Persistent.MANHUNT_PERSISTENT.`data`.gameState == GameState.NOT_STARTED
+    fun isStarting(): Boolean = Persistent.MANHUNT_PERSISTENT.`data`.gameState == GameState.STARTING
     fun isRunning(): Boolean = Persistent.MANHUNT_PERSISTENT.`data`.gameState == GameState.RUNNING
     fun isPaused(): Boolean = Persistent.MANHUNT_PERSISTENT.`data`.gameState == GameState.PAUSED
     fun isFinished(): Boolean = Persistent.MANHUNT_PERSISTENT.`data`.gameState == GameState.FINISHED
@@ -22,5 +23,9 @@ object GameUtils {
             .findFirst()
 
     fun isPlayerAnHunter(name: String)  = Configs.MANHUNT_CONFIG.`data`.hunters.any { it == name }
+
+//    fun getTheHuntedOnesAsServerPlayerEntity(minecraftServer: MinecraftServer) = minecraftServer.playerManager.playerList.filter { serverPlayerEntity -> Configs.MANHUNT_CONFIG.`data`.theHuntedOnes.any { name -> name == serverPlayerEntity.name.string } }.toList()
+//    fun getHuntersAsServerPlayerEntity(minecraftServer: MinecraftServer) = minecraftServer.playerManager.playerList.filter { serverPlayerEntity -> Configs.MANHUNT_CONFIG.`data`.hunters.any { name -> name == serverPlayerEntity.name.string } }.toList()
+
 
 }

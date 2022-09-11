@@ -1,6 +1,7 @@
 package ch.skyfy.manhunt.logic
 
 import ch.skyfy.jsonconfiglib.ConfigManager
+import ch.skyfy.manhunt.ManHuntMod.Companion.CONFIG_DIRECTORY
 import ch.skyfy.manhunt.callbacks.EntityDamageCallback
 import ch.skyfy.manhunt.callbacks.PlayerMoveCallback
 import ch.skyfy.manhunt.callbacks.TimeUpdatedCallback
@@ -17,6 +18,8 @@ import net.minecraft.entity.LivingEntity
 import net.minecraft.entity.attribute.EntityAttributeModifier
 import net.minecraft.entity.attribute.EntityAttributes
 import net.minecraft.entity.damage.DamageSource
+import net.minecraft.nbt.NbtIo
+import net.minecraft.nbt.NbtList
 import net.minecraft.network.packet.s2c.play.EntityAttributesS2CPacket
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.network.ServerPlayNetworkHandler
@@ -37,23 +40,34 @@ class Game(private val minecraftServer: MinecraftServer) {
     private val events: Events = Events(this)
     private val timeline: Timeline = Timeline()
 
-    init {
+    private val huntersServerPlayerEntities: MutableSet<ServerPlayerEntity> = mutableSetOf()
+    private val theHuntedOnesServerPlayerEntities: MutableSet<ServerPlayerEntity> = mutableSetOf()
 
+    init {
         registerEvents()
     }
 
     private fun registerEvents() {
-        PlayerMoveCallback.EVENT.register(events::onPlayerMove)
         ServerPlayConnectionEvents.JOIN.register(events::onPlayerJoin)
+        ServerPlayConnectionEvents.DISCONNECT.register(events::onPlayerDisconnect)
+        PlayerMoveCallback.EVENT.register(events::onPlayerMove)
         EntityDamageCallback.EVENT.register(events::onPlayerDamage)
         TimeUpdatedCallback.EVENT.register(events::onTimeUpdated)
     }
 
-    fun cooldownStart(){
+    fun cooldownStart() {
+
+        // Clear some player stats
+        val players = theHuntedOnesServerPlayerEntities + huntersServerPlayerEntities
+        players.forEach { serverPlayerEntity ->
+            serverPlayerEntity.clearStatusEffects()
+            serverPlayerEntity.inventory.clear()
+        }
+
         var count = 0
         infiniteMcCoroutineTask(sync = true, client = false, period = 1.seconds) {
             minecraftServer.broadcastText(Text.literal("Game starting in ${20 - count}").setStyle(Style.EMPTY.withColor(Formatting.LIGHT_PURPLE)))
-            if(++count == 2) {
+            if (++count == 20) {
                 minecraftServer.broadcastText(Text.literal("The game has started !").setStyle(Style.EMPTY.withColor(Formatting.LIGHT_PURPLE)))
                 cancel()
                 start()
@@ -65,41 +79,57 @@ class Game(private val minecraftServer: MinecraftServer) {
         Persistent.MANHUNT_PERSISTENT.`data`.gameState = GameState.RUNNING
         ConfigManager.save(Persistent.MANHUNT_PERSISTENT)
 
+        val huntersStarterKitFile = CONFIG_DIRECTORY.resolve("starter-kit-hunters.dat").toFile()
+        val theHuntedOnesStarterKitFile = CONFIG_DIRECTORY.resolve("starter-kit-theHuntedOnes.dat").toFile()
+
         timeline.startTimer()
 
-        val theHuntedOnes = Configs.MANHUNT_CONFIG.`data`.theHuntedOnes
-        minecraftServer.playerManager.playerList.forEach { serverPlayerEntity ->
-            if (theHuntedOnes.any { it == serverPlayerEntity.name.string }) {
-                serverPlayerEntity.changeGameMode(GameMode.SURVIVAL)
-                serverPlayerEntity.sendMessage(Text.literal("Good Luck Buddies ! Run run run").setStyle(Style.EMPTY.withColor(Formatting.GREEN)))
+        theHuntedOnesServerPlayerEntities.forEach { serverPlayerEntity ->
+            if (theHuntedOnesStarterKitFile.exists()) {
+                val inventory = NbtIo.read(theHuntedOnesStarterKitFile)
+                if (inventory != null) serverPlayerEntity.inventory.readNbt(inventory.get("inventory") as NbtList?)
             }
+            serverPlayerEntity.changeGameMode(GameMode.SURVIVAL)
+            serverPlayerEntity.sendMessage(Text.literal("Good Luck Buddies ! Run run run").setStyle(Style.EMPTY.withColor(Formatting.GREEN)))
         }
 
-        val theHuntedOnesPlayer = minecraftServer.playerManager.playerList.filter { serverPlayerEntity -> theHuntedOnes.any { name -> name == serverPlayerEntity.name.string } }.toList()
         val huntersDelay = Configs.MANHUNT_CONFIG.`data`.huntersDelay
         var count = 0
         infiniteMcCoroutineTask(sync = true, client = false, period = 1.seconds) {
-            theHuntedOnesPlayer.forEach {serverPlayerEntity ->
-                serverPlayerEntity.sendMessage(Text.literal("Wait ${huntersDelay - count} seconds before chasing them !").setStyle(Style.EMPTY.withColor(Formatting.LIGHT_PURPLE)))
+            huntersServerPlayerEntities.forEach { serverPlayerEntity ->
+                serverPlayerEntity.sendMessage(Text.literal("Wait ${huntersDelay - count} seconds before chasing them !").setStyle(Style.EMPTY.withColor(Formatting.LIGHT_PURPLE)), true)
             }
-            if(++count == huntersDelay) {
-                theHuntedOnesPlayer.forEach {serverPlayerEntity ->
+            if (++count == huntersDelay) {
+                huntersServerPlayerEntities.forEach { serverPlayerEntity ->
+                    if (huntersStarterKitFile.exists()) {
+                        val inventory = NbtIo.read(huntersStarterKitFile)
+                        if (inventory != null) serverPlayerEntity.inventory.readNbt(inventory.get("inventory") as NbtList?)
+                    }
+//                    val compass = ItemStack(Items.COMPASS)
+//                    val compassItem = (compass.item as CompassItem)
+
                     serverPlayerEntity.sendMessage(Text.literal("Go go go !").setStyle(Style.EMPTY.withColor(Formatting.LIGHT_PURPLE)))
                 }
+                Persistent.MANHUNT_PERSISTENT.`data`.huntersStarted = true
+                ConfigManager.save(Persistent.MANHUNT_PERSISTENT)
                 cancel()
-                start()
             }
         }
-    }
 
-    private fun startForHunters() {
-        val hunters = Configs.MANHUNT_CONFIG.`data`.hunters
-        minecraftServer.playerManager.playerList.forEach { serverPlayerEntity ->
-            if (hunters.any { it == serverPlayerEntity.name.string }) {
-                serverPlayerEntity.changeGameMode(GameMode.SURVIVAL)
-                serverPlayerEntity.sendMessage(Text.literal("The game has begin ! Chase chase chase"))
+        // Show the hunted ones position every x seconds
+        val period = Configs.MANHUNT_CONFIG.`data`.showTheHuntedOnePositionPeriod
+        infiniteMcCoroutineTask(sync = true, client = false, period = period.seconds) {
+            huntersServerPlayerEntities.forEach { hunter ->
+                hunter.sendMessage(Text.literal("Positions for the hunted will be show below").setStyle(Style.EMPTY.withColor(Formatting.GOLD)))
+                theHuntedOnesServerPlayerEntities.forEachIndexed { index, theHunted ->
+                    val x = theHunted.blockX
+                    val y = theHunted.blockY
+                    val z = theHunted.blockZ
+                    hunter.sendMessage(Text.literal("   $index.  x: $x   y:$y    z:$z").setStyle(Style.EMPTY.withColor(Formatting.GOLD)))
+                }
             }
         }
+
     }
 
     @Suppress("UNUSED_PARAMETER")
@@ -111,7 +141,7 @@ class Game(private val minecraftServer: MinecraftServer) {
             if (GameUtils.isFinished()) return ActionResult.PASS
             if (GameUtils.isPaused()) return ActionResult.FAIL
 
-            if (GameUtils.isNotStarted()) {
+            if (GameUtils.isNotStarted() || GameUtils.isStarting()) {
                 val waitingRoom = Configs.MANHUNT_CONFIG.`data`.waitingRoom
                 if (MathUtils.cancelPlayerFromLeavingAnArea(player, waitingRoom.cube, waitingRoom.spawnLocation)) return ActionResult.FAIL
             }
@@ -120,7 +150,6 @@ class Game(private val minecraftServer: MinecraftServer) {
                 if (!Persistent.MANHUNT_PERSISTENT.`data`.huntersStarted) {
                     val hunters = Configs.MANHUNT_CONFIG.`data`.hunters
                     if (hunters.any { it == player.name.string }) {
-                        player.sendMessage(Text.literal("You have to wait before chasing !"))
                         val waitingRoom = Configs.MANHUNT_CONFIG.`data`.waitingRoom
                         if (MathUtils.cancelPlayerFromLeavingAnArea(player, waitingRoom.cube, waitingRoom.spawnLocation)) return ActionResult.FAIL
                     }
@@ -128,6 +157,14 @@ class Game(private val minecraftServer: MinecraftServer) {
             }
 
             return ActionResult.PASS
+        }
+
+        fun onPlayerDisconnect(handler: ServerPlayNetworkHandler, server: MinecraftServer){
+            val player = handler.player
+            val theHuntedOnes = Configs.MANHUNT_CONFIG.`data`.theHuntedOnes
+            val hunters = Configs.MANHUNT_CONFIG.`data`.hunters
+            if (hunters.any { name -> name == player.name.string }) game.huntersServerPlayerEntities.remove(player)
+            if (theHuntedOnes.any { name -> name == player.name.string }) game.theHuntedOnesServerPlayerEntities.remove(player)
         }
 
         fun onPlayerJoin(handler: ServerPlayNetworkHandler, sender: PacketSender?, server: MinecraftServer) {
@@ -203,6 +240,11 @@ class Game(private val minecraftServer: MinecraftServer) {
             }
 
             val player = handler.player
+            val theHuntedOnes = Configs.MANHUNT_CONFIG.`data`.theHuntedOnes
+            val hunters = Configs.MANHUNT_CONFIG.`data`.hunters
+
+            if (hunters.any { name -> name == player.name.string }) game.huntersServerPlayerEntities.add(player)
+            if (theHuntedOnes.any { name -> name == player.name.string }) game.theHuntedOnesServerPlayerEntities.add(player)
 
             if (GameUtils.isNotStarted()) {
 
@@ -210,9 +252,7 @@ class Game(private val minecraftServer: MinecraftServer) {
 
                 player.health = player.maxHealth
 
-                val theHuntedOnes = Configs.MANHUNT_CONFIG.`data`.theHuntedOnes
                 val theHuntedOnesHealth = Configs.MANHUNT_CONFIG.`data`.theHuntedOnesHealth
-                val hunters = Configs.MANHUNT_CONFIG.`data`.hunters
                 val huntersHealth = Configs.MANHUNT_CONFIG.`data`.huntersHealth
 
                 hunters.find { it == player.name.string }?.let { setCustomHealth(player, huntersHealth) }
@@ -229,21 +269,12 @@ class Game(private val minecraftServer: MinecraftServer) {
         }
 
         fun onPlayerDamage(livingEntity: LivingEntity, damageSource: DamageSource, amount: Float): ActionResult {
-            if (GameUtils.isNotStarted() && livingEntity is ServerPlayerEntity) return ActionResult.FAIL
+            if ((GameUtils.isNotStarted() || GameUtils.isStarting()) && livingEntity is ServerPlayerEntity) return ActionResult.FAIL
             if (GameUtils.isRunning() && livingEntity is ServerPlayerEntity && GameUtils.isPlayerAnHunter(livingEntity.name.string) && !Persistent.MANHUNT_PERSISTENT.`data`.huntersStarted) return ActionResult.FAIL
             return ActionResult.PASS
         }
 
         fun onTimeUpdated(day: Int, minutes: Int, seconds: Int, timeOfDay: Int): ActionResult {
-            val huntersDelay = Configs.MANHUNT_CONFIG.`data`.huntersDelay
-            val totalSeconds = seconds + (minutes * 60) + (day * 24_000)
-
-            if (!Persistent.MANHUNT_PERSISTENT.`data`.huntersStarted && totalSeconds >= huntersDelay) {
-                Persistent.MANHUNT_PERSISTENT.`data`.huntersStarted = true
-                ConfigManager.save(Persistent.MANHUNT_PERSISTENT)
-
-            }
-
             return ActionResult.PASS
         }
 

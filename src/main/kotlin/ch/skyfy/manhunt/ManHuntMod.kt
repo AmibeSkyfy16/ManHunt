@@ -4,6 +4,9 @@ package ch.skyfy.manhunt
 import ch.skyfy.manhunt.config.Configs
 import ch.skyfy.betterenderman.utils.setupConfigDirectory
 import ch.skyfy.jsonconfiglib.ConfigManager
+import ch.skyfy.manhunt.command.CreateStarterKitCmd
+import ch.skyfy.manhunt.command.ReloadConfigCmd
+import ch.skyfy.manhunt.command.ReloadPersistentCmd
 import ch.skyfy.manhunt.command.StartCmd
 import ch.skyfy.manhunt.logic.Game
 import net.fabricmc.api.ModInitializer
@@ -28,12 +31,18 @@ class ManHuntMod : ModInitializer {
     private val optGameRef: AtomicReference<Optional<Game>> = AtomicReference(Optional.empty())
 
     private val startCmd: StartCmd
+    private val createStarterKitCmd: CreateStarterKitCmd
+    private val reloadConfigCmd: ReloadConfigCmd
+    private val reloadPersistentCmd: ReloadPersistentCmd
 
     init {
         setupConfigDirectory()
         ConfigManager.loadConfigs(arrayOf(Configs.javaClass))
 
         startCmd = StartCmd(optGameRef)
+        createStarterKitCmd = CreateStarterKitCmd(optGameRef)
+        reloadConfigCmd = ReloadConfigCmd()
+        reloadPersistentCmd = ReloadPersistentCmd()
     }
 
     override fun onInitialize() {
@@ -44,6 +53,9 @@ class ManHuntMod : ModInitializer {
     private fun registerCommands() {
         CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
             startCmd.register(dispatcher)
+            createStarterKitCmd.register(dispatcher)
+            reloadConfigCmd.register(dispatcher)
+            reloadPersistentCmd.register(dispatcher)
         }
     }
 

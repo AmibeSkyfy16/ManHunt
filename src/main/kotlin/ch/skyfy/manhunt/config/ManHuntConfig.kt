@@ -19,6 +19,7 @@ data class ManHuntConfig(
     val huntersDelay: Int,
     val huntersHealth: Double,
     val theHuntedOnesHealth: Double,
+    val showTheHuntedOnePositionPeriod: Int,
     val waitingRoom: WaitingRoom
 ) : Validatable {
 
@@ -31,6 +32,7 @@ class DefaultManHuntConfig : Defaultable<ManHuntConfig> {
         20,
         20.0,
         80.0,
+        30,
         WaitingRoom(
             Cube(10, 0.0, 310.0, 0.0),
             SpawnLocation("minecraft:overworld", 0.0, 310.0, 0.0, 180f, 2.8f)
