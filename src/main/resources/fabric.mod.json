@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "manhunt",
+  "version": "${version}",
+  "name": "ManHunt",
+  "description": "A manhunt mod",
+  "authors": [
+    "Skyfy16"
+  ],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/manhunt/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      {
+        "adapter": "kotlin",
+        "value": "ch.skyfy.manhunt.ManHuntMod"
+      }
+    ]
+  },
+  "mixins": [
+    "manhunt.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.14.9",
+    "fabric": "*",
+    "minecraft": "1.19.2",
+    "fabric-language-kotlin": ">=1.8.3+kotlin.1.7.10"
+  }
+}
