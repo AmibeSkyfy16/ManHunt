@@ -32,6 +32,7 @@ import net.minecraft.util.math.BlockPos
 import net.minecraft.world.GameMode
 import net.silkmc.silk.core.task.infiniteMcCoroutineTask
 import net.silkmc.silk.core.text.broadcastText
+import java.io.File
 import java.util.*
 import kotlin.time.Duration.Companion.seconds
 
@@ -76,6 +77,13 @@ class Game(private val minecraftServer: MinecraftServer) {
     }
 
     private fun start() {
+        fun insertStarterKit(starterKitFile: File, serverPlayerEntity: ServerPlayerEntity){
+            if (starterKitFile.exists()) {
+                val inventory = NbtIo.read(starterKitFile)
+                if (inventory != null) serverPlayerEntity.inventory.readNbt(inventory.get("inventory") as NbtList?)
+            }
+        }
+
         Persistent.MANHUNT_PERSISTENT.`data`.gameState = GameState.RUNNING
         ConfigManager.save(Persistent.MANHUNT_PERSISTENT)
 
@@ -85,10 +93,7 @@ class Game(private val minecraftServer: MinecraftServer) {
         timeline.startTimer()
 
         theHuntedOnesServerPlayerEntities.forEach { serverPlayerEntity ->
-            if (theHuntedOnesStarterKitFile.exists()) {
-                val inventory = NbtIo.read(theHuntedOnesStarterKitFile)
-                if (inventory != null) serverPlayerEntity.inventory.readNbt(inventory.get("inventory") as NbtList?)
-            }
+            insertStarterKit(theHuntedOnesStarterKitFile, serverPlayerEntity)
             serverPlayerEntity.changeGameMode(GameMode.SURVIVAL)
             serverPlayerEntity.sendMessage(Text.literal("Good Luck Buddies ! Run run run").setStyle(Style.EMPTY.withColor(Formatting.GREEN)))
         }
@@ -101,13 +106,7 @@ class Game(private val minecraftServer: MinecraftServer) {
             }
             if (++count == huntersDelay) {
                 huntersServerPlayerEntities.forEach { serverPlayerEntity ->
-                    if (huntersStarterKitFile.exists()) {
-                        val inventory = NbtIo.read(huntersStarterKitFile)
-                        if (inventory != null) serverPlayerEntity.inventory.readNbt(inventory.get("inventory") as NbtList?)
-                    }
-//                    val compass = ItemStack(Items.COMPASS)
-//                    val compassItem = (compass.item as CompassItem)
-
+                    insertStarterKit(huntersStarterKitFile, serverPlayerEntity)
                     serverPlayerEntity.sendMessage(Text.literal("Go go go !").setStyle(Style.EMPTY.withColor(Formatting.LIGHT_PURPLE)))
                 }
                 Persistent.MANHUNT_PERSISTENT.`data`.huntersStarted = true
@@ -134,30 +133,6 @@ class Game(private val minecraftServer: MinecraftServer) {
 
     @Suppress("UNUSED_PARAMETER")
     class Events(private val game: Game) {
-
-        fun onPlayerMove(moveData: PlayerMoveCallback.MoveData, player: ServerPlayerEntity): ActionResult {
-            if (player.hasPermissionLevel(4)) return ActionResult.PASS
-
-            if (GameUtils.isFinished()) return ActionResult.PASS
-            if (GameUtils.isPaused()) return ActionResult.FAIL
-
-            if (GameUtils.isNotStarted() || GameUtils.isStarting()) {
-                val waitingRoom = Configs.MANHUNT_CONFIG.`data`.waitingRoom
-                if (MathUtils.cancelPlayerFromLeavingAnArea(player, waitingRoom.cube, waitingRoom.spawnLocation)) return ActionResult.FAIL
-            }
-
-            if (GameUtils.isRunning()) {
-                if (!Persistent.MANHUNT_PERSISTENT.`data`.huntersStarted) {
-                    val hunters = Configs.MANHUNT_CONFIG.`data`.hunters
-                    if (hunters.any { it == player.name.string }) {
-                        val waitingRoom = Configs.MANHUNT_CONFIG.`data`.waitingRoom
-                        if (MathUtils.cancelPlayerFromLeavingAnArea(player, waitingRoom.cube, waitingRoom.spawnLocation)) return ActionResult.FAIL
-                    }
-                }
-            }
-
-            return ActionResult.PASS
-        }
 
         fun onPlayerDisconnect(handler: ServerPlayNetworkHandler, server: MinecraftServer){
             val player = handler.player
@@ -268,9 +243,41 @@ class Game(private val minecraftServer: MinecraftServer) {
             }
         }
 
+        fun onPlayerMove(moveData: PlayerMoveCallback.MoveData, player: ServerPlayerEntity): ActionResult {
+            if (player.hasPermissionLevel(4) && Configs.MANHUNT_CONFIG.`data`.debug) return ActionResult.PASS
+
+            if (GameUtils.isFinished()) return ActionResult.PASS
+            if (GameUtils.isPaused()) return ActionResult.FAIL
+
+            if (GameUtils.isNotStarted() || GameUtils.isStarting()) {
+                val waitingRoom = Configs.MANHUNT_CONFIG.`data`.waitingRoom
+                if (MathUtils.cancelPlayerFromLeavingAnArea(player, waitingRoom.cube, waitingRoom.spawnLocation)) return ActionResult.FAIL
+            }
+
+            if (GameUtils.isRunning()) {
+                if (!Persistent.MANHUNT_PERSISTENT.`data`.huntersStarted) {
+                    game.huntersServerPlayerEntities.find { it === player }?.let {
+                        val waitingRoom = Configs.MANHUNT_CONFIG.`data`.waitingRoom
+                        if (MathUtils.cancelPlayerFromLeavingAnArea(player, waitingRoom.cube, waitingRoom.spawnLocation)) return ActionResult.FAIL
+                    }
+//                    val hunters = Configs.MANHUNT_CONFIG.`data`.hunters
+//                    if (hunters.any { it == player.name.string }) {
+//                        val waitingRoom = Configs.MANHUNT_CONFIG.`data`.waitingRoom
+//                        if (MathUtils.cancelPlayerFromLeavingAnArea(player, waitingRoom.cube, waitingRoom.spawnLocation)) return ActionResult.FAIL
+//                    }
+                }
+            }
+
+            return ActionResult.PASS
+        }
+
         fun onPlayerDamage(livingEntity: LivingEntity, damageSource: DamageSource, amount: Float): ActionResult {
+            if (livingEntity is ServerPlayerEntity && livingEntity.hasPermissionLevel(4) && Configs.MANHUNT_CONFIG.`data`.debug) return ActionResult.PASS
+
             if ((GameUtils.isNotStarted() || GameUtils.isStarting()) && livingEntity is ServerPlayerEntity) return ActionResult.FAIL
+
             if (GameUtils.isRunning() && livingEntity is ServerPlayerEntity && GameUtils.isPlayerAnHunter(livingEntity.name.string) && !Persistent.MANHUNT_PERSISTENT.`data`.huntersStarted) return ActionResult.FAIL
+
             return ActionResult.PASS
         }
 
