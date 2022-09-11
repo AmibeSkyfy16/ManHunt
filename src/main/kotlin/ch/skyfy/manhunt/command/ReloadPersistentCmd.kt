@@ -8,7 +8,6 @@ import com.mojang.brigadier.context.CommandContext
 import net.minecraft.server.command.CommandManager.literal
 import net.minecraft.server.command.ServerCommandSource
 
-
 class ReloadPersistentCmd : Command<ServerCommandSource> {
 
     fun register(dispatcher: CommandDispatcher<ServerCommandSource>) {

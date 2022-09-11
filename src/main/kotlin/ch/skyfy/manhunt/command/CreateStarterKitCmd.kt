@@ -1,6 +1,8 @@
 package ch.skyfy.manhunt.command
 
 import ch.skyfy.manhunt.ManHuntMod
+import ch.skyfy.manhunt.ManHuntMod.Companion.THE_HUNTED_ONES
+import ch.skyfy.manhunt.ManHuntMod.Companion.THE_HUNTERS
 import ch.skyfy.manhunt.logic.Game
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
@@ -16,13 +18,22 @@ import net.minecraft.util.Formatting
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 
-
 class CreateStarterKitCmd(private val optGameRef: AtomicReference<Optional<Game>>) : Command<ServerCommandSource> {
 
     fun register(dispatcher: CommandDispatcher<ServerCommandSource>) {
+        val literal = literal("create-kit")
+            .then(literal("starter").executes(this))
+            .then(literal("respawn").executes(this))
+
         val command = literal("manhunt")
-            .then(literal("hunters").then(literal("createStarterKit").executes(this)))
-            .then(literal("theHuntedOnes").then(literal("createStarterKit").executes(this)))
+            .then(
+                literal(THE_HUNTERS)
+                    .then(literal)
+            )
+            .then(
+                literal(THE_HUNTED_ONES)
+                    .then(literal)
+            )
         dispatcher.register(command)
     }
 
@@ -30,16 +41,17 @@ class CreateStarterKitCmd(private val optGameRef: AtomicReference<Optional<Game>
         if (optGameRef.get().isEmpty) return Command.SINGLE_SUCCESS
         val player = context.source.player ?: return Command.SINGLE_SUCCESS
 
-        val type = context.nodes[1]
-        val name = type.node.name
-        val filename = "starter-kit-$name.dat"
+        val name = context.nodes[1].node.name
+        val kitName = context.nodes[3].node.name
+
+        val filename = "$kitName-kit-$name.dat"
 
         val nbtList = player.inventory.writeNbt(NbtList())
         val nbtCompound = NbtCompound()
         nbtCompound.put("inventory", nbtList)
         NbtIo.write(nbtCompound, ManHuntMod.CONFIG_DIRECTORY.resolve(filename).toFile())
 
-        player.sendMessage(Text.literal("You have successfully save your inventory acting as starter kit for $name").setStyle(Style.EMPTY.withColor(Formatting.GREEN)))
+        player.sendMessage(Text.literal("You have successfully save your inventory acting as $kitName kit for $name").setStyle(Style.EMPTY.withColor(Formatting.GREEN)))
 
         return Command.SINGLE_SUCCESS
     }

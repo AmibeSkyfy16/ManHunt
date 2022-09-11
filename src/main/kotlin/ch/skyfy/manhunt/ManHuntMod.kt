@@ -23,6 +23,8 @@ class ManHuntMod : ModInitializer {
 
     companion object {
         private const val MOD_ID: String = "manhunt"
+        const val THE_HUNTERS = "the-hunters"
+        const val THE_HUNTED_ONES = "the-hunted-ones"
         val CONFIG_DIRECTORY: Path = FabricLoader.getInstance().configDir.resolve(MOD_ID)
         val PERSISTENT_DIRECTORY: Path = CONFIG_DIRECTORY.resolve("persistent")
         val LOGGER: Logger = LogManager.getLogger(ManHuntMod::class.java)

@@ -24,8 +24,4 @@ object GameUtils {
 
     fun isPlayerAnHunter(name: String)  = Configs.MANHUNT_CONFIG.`data`.hunters.any { it == name }
 
-//    fun getTheHuntedOnesAsServerPlayerEntity(minecraftServer: MinecraftServer) = minecraftServer.playerManager.playerList.filter { serverPlayerEntity -> Configs.MANHUNT_CONFIG.`data`.theHuntedOnes.any { name -> name == serverPlayerEntity.name.string } }.toList()
-//    fun getHuntersAsServerPlayerEntity(minecraftServer: MinecraftServer) = minecraftServer.playerManager.playerList.filter { serverPlayerEntity -> Configs.MANHUNT_CONFIG.`data`.hunters.any { name -> name == serverPlayerEntity.name.string } }.toList()
-
-
 }

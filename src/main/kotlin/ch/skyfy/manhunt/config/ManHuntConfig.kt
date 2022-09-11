@@ -24,6 +24,9 @@ data class ManHuntConfig(
     val debug: Boolean
 ) : Validatable {
 
+    override fun validateImpl(errors: MutableList<String>) {
+        super.validateImpl(errors)
+    }
 }
 
 class DefaultManHuntConfig : Defaultable<ManHuntConfig> {
