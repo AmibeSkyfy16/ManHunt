@@ -21,7 +21,7 @@ data class ManHuntConfig(
     val theHuntedOnesHealth: Double,
     val showTheHuntedOnePositionPeriod: Int,
     val waitingRoom: WaitingRoom,
-    val debug: Boolean
+    var debug: Boolean
 ) : Validatable {
 
     override fun validateImpl(errors: MutableList<String>) {

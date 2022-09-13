@@ -12,8 +12,8 @@ class Timeline {
 
     }
 
-    fun startTimer(){
-        infiniteMcCoroutineTask(sync = false, client = false, period = 1.ticks){
+    fun startTimer() {
+        infiniteMcCoroutineTask(sync = false, client = false, period = 1.ticks) {
             val timelinePersistent = Persistent.TIMELINE_PERSISTENT.`data`
 
             if (timelinePersistent.timeOfDay >= 20 * 1200) {
@@ -34,7 +34,7 @@ class Timeline {
         }
     }
 
-    private fun saveData(){
+    private fun saveData() {
         ConfigManager.save(Persistent.TIMELINE_PERSISTENT)
     }
 

@@ -19,9 +19,13 @@ object GameUtils {
     fun isFinished(): Boolean = Persistent.MANHUNT_PERSISTENT.`data`.gameState == GameState.FINISHED
 
     fun getServerWorldByIdentifier(server: MinecraftServer, id: String): Optional<ServerWorld> = StreamSupport.stream(server.worlds.spliterator(), false)
-            .filter { serverWorld: ServerWorld -> serverWorld.dimension.effects().toString() == id }
-            .findFirst()
+        .filter { serverWorld: ServerWorld -> serverWorld.dimension.effects().toString() == id }
+        .findFirst()
 
-    fun isPlayerAnHunter(name: String)  = Configs.MANHUNT_CONFIG.`data`.hunters.any { it == name }
+    fun getPlayerRole(name: String): BaseRole.Role {
+        return if (Configs.MANHUNT_CONFIG.`data`.hunters.any { it == name }) BaseRole.Role.HUNTER
+        else if (Configs.MANHUNT_CONFIG.`data`.theHuntedOnes.any { it == name }) BaseRole.Role.THE_HUNTED_ONE
+        else BaseRole.Role.NO_ROLE
+    }
 
 }
