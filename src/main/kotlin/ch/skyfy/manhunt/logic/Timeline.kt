@@ -8,10 +8,6 @@ import net.silkmc.silk.core.task.infiniteMcCoroutineTask
 
 class Timeline {
 
-    init {
-
-    }
-
     fun startTimer() {
         infiniteMcCoroutineTask(sync = false, client = false, period = 1.ticks) {
             val timelinePersistent = Persistent.TIMELINE_PERSISTENT.`data`
