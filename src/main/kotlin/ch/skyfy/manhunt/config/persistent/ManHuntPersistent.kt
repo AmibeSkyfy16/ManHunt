@@ -1,4 +1,4 @@
-package ch.skyfy.manhunt.logic.persistent
+package ch.skyfy.manhunt.config.persistent
 
 import ch.skyfy.jsonconfiglib.Defaultable
 import ch.skyfy.jsonconfiglib.Validatable

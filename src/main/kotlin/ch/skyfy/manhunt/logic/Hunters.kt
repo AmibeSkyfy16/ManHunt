@@ -4,7 +4,7 @@ import ch.skyfy.jsonconfiglib.ConfigManager
 import ch.skyfy.manhunt.ManHuntMod
 import ch.skyfy.manhunt.ManHuntMod.Companion.CONFIG_DIRECTORY
 import ch.skyfy.manhunt.config.Configs
-import ch.skyfy.manhunt.logic.persistent.Persistent
+import ch.skyfy.manhunt.config.persistent.Persistent
 import kotlinx.coroutines.cancel
 import net.minecraft.nbt.NbtList
 import net.minecraft.server.MinecraftServer

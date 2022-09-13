@@ -3,7 +3,7 @@ package ch.skyfy.manhunt.logic
 import ch.skyfy.manhunt.callbacks.EntityDamageCallback
 import ch.skyfy.manhunt.callbacks.PlayerMoveCallback
 import ch.skyfy.manhunt.config.Configs
-import ch.skyfy.manhunt.logic.persistent.Persistent
+import ch.skyfy.manhunt.config.persistent.Persistent
 import ch.skyfy.manhunt.utils.MathUtils
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents
 import net.fabricmc.fabric.api.networking.v1.PacketSender

@@ -2,7 +2,7 @@ package ch.skyfy.manhunt.logic
 
 import ch.skyfy.jsonconfiglib.ConfigManager
 import ch.skyfy.manhunt.callbacks.TimeUpdatedCallback
-import ch.skyfy.manhunt.logic.persistent.Persistent
+import ch.skyfy.manhunt.config.persistent.Persistent
 import net.silkmc.silk.core.kotlin.ticks
 import net.silkmc.silk.core.task.infiniteMcCoroutineTask
 

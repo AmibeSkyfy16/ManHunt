@@ -2,9 +2,25 @@ package ch.skyfy.manhunt.config
 
 import ch.skyfy.jsonconfiglib.Defaultable
 import ch.skyfy.jsonconfiglib.Validatable
-import ch.skyfy.manhunt.data.Cube
-import ch.skyfy.manhunt.data.SpawnLocation
 import kotlinx.serialization.Serializable
+
+@Serializable
+data class Cube(
+    val size: Int,
+    val x: Double,
+    val y: Double,
+    val z: Double,
+): Validatable
+
+@Serializable
+data class SpawnLocation(
+    val dimensionName: String,
+    val x: Double,
+    val y: Double,
+    val z: Double,
+    val yaw: Float,
+    val pitch: Float
+): Validatable
 
 @Serializable
 data class WaitingRoom(

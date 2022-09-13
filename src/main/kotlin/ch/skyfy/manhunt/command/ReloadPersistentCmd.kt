@@ -1,7 +1,7 @@
 package ch.skyfy.manhunt.command
 
 import ch.skyfy.jsonconfiglib.ConfigManager
-import ch.skyfy.manhunt.logic.persistent.Persistent
+import ch.skyfy.manhunt.config.persistent.Persistent
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.context.CommandContext

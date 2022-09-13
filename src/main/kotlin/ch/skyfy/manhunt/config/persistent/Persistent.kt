@@ -1,4 +1,4 @@
-package ch.skyfy.manhunt.logic.persistent
+package ch.skyfy.manhunt.config.persistent
 
 import ch.skyfy.jsonconfiglib.ConfigData
 import ch.skyfy.manhunt.ManHuntMod.Companion.PERSISTENT_DIRECTORY

@@ -3,8 +3,8 @@
 package ch.skyfy.manhunt.logic
 
 import ch.skyfy.manhunt.config.Configs
-import ch.skyfy.manhunt.logic.persistent.GameState
-import ch.skyfy.manhunt.logic.persistent.Persistent
+import ch.skyfy.manhunt.config.persistent.GameState
+import ch.skyfy.manhunt.config.persistent.Persistent
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.world.ServerWorld
 import java.util.*
