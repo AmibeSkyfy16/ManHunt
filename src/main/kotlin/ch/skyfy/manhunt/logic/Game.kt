@@ -1,7 +1,6 @@
 package ch.skyfy.manhunt.logic
 
 import ch.skyfy.jsonconfiglib.ConfigManager
-import ch.skyfy.manhunt.ManHuntMod
 import ch.skyfy.manhunt.ManHuntMod.Companion.CONFIG_DIRECTORY
 import ch.skyfy.manhunt.ManHuntMod.Companion.THE_HUNTED_ONES
 import ch.skyfy.manhunt.ManHuntMod.Companion.THE_HUNTERS
@@ -54,6 +53,12 @@ class Game(private val minecraftServer: MinecraftServer) {
 
     private val deadPlayers: MutableSet<String> = mutableSetOf()
 
+    private val huntersStarterKitFile = CONFIG_DIRECTORY.resolve("starter-kit-$THE_HUNTERS.dat").toFile()
+    private val huntersRespawnKitFile = CONFIG_DIRECTORY.resolve("respawn-kit-$THE_HUNTERS.dat").toFile()
+    private val theHuntedOnesStarterKitFile = CONFIG_DIRECTORY.resolve("starter-kit-$THE_HUNTED_ONES.dat").toFile()
+    private val theHuntedOnesRespawnKitFile = CONFIG_DIRECTORY.resolve("respawn-kit-$THE_HUNTED_ONES.dat").toFile()
+
+
     init {
         registerEvents()
     }
@@ -88,40 +93,36 @@ class Game(private val minecraftServer: MinecraftServer) {
     }
 
     private fun start() {
-        Persistent.MANHUNT_PERSISTENT.`data`.gameState = GameState.RUNNING
-        ConfigManager.save(Persistent.MANHUNT_PERSISTENT)
 
-        val huntersStarterKitFile = CONFIG_DIRECTORY.resolve("starter-kit-$THE_HUNTERS.dat").toFile()
-        val theHuntedOnesStarterKitFile = CONFIG_DIRECTORY.resolve("starter-kit-$THE_HUNTED_ONES.dat").toFile()
+        ConfigManager.computeAndSave(Persistent.MANHUNT_PERSISTENT, { it.gameState = GameState.RUNNING })
 
         timeline.startTimer()
 
-        theHuntedOnesServerPlayerEntities.forEach { serverPlayerEntity ->
-            insertKit(theHuntedOnesStarterKitFile, serverPlayerEntity)
-            serverPlayerEntity.changeGameMode(GameMode.SURVIVAL)
-            serverPlayerEntity.sendMessage(Text.literal("Good Luck Buddies ! Run run run").setStyle(Style.EMPTY.withColor(Formatting.GREEN)))
-        }
+        insertKit(theHuntedOnesStarterKitFile, theHuntedOnesServerPlayerEntities, Text.literal("Good Luck Buddies ! Run run run").setStyle(Style.EMPTY.withColor(Formatting.GREEN)))
 
+        delayedStartForHunters()
+
+        showTheHuntedOnesPositionsToHunters()
+
+    }
+
+
+    private fun delayedStartForHunters() {
         val huntersDelay = Configs.MANHUNT_CONFIG.`data`.huntersDelay
         var count = 0
+        minecraftServer.broadcastText(Text.literal("The game starts, the hunters must wait another 60 seconds before they can chase you").setStyle(Style.EMPTY.withColor(Formatting.GOLD)))
         infiniteMcCoroutineTask(sync = true, client = false, period = 1.seconds) {
-            huntersServerPlayerEntities.forEach { serverPlayerEntity ->
-                serverPlayerEntity.sendMessage(Text.literal("Wait ${huntersDelay - count} seconds before chasing them !").setStyle(Style.EMPTY.withColor(Formatting.LIGHT_PURPLE)), true)
-            }
+            huntersServerPlayerEntities.forEach { it.sendMessage(Text.literal("${huntersDelay - count}").setStyle(Style.EMPTY.withColor(Formatting.LIGHT_PURPLE)), true) }
             if (++count == huntersDelay) {
-                huntersServerPlayerEntities.forEach { serverPlayerEntity ->
-                    insertKit(huntersStarterKitFile, serverPlayerEntity)
-                    serverPlayerEntity.sendMessage(Text.literal("Go go go !").setStyle(Style.EMPTY.withColor(Formatting.LIGHT_PURPLE)))
-                }
-                Persistent.MANHUNT_PERSISTENT.`data`.huntersStarted = true
-                ConfigManager.save(Persistent.MANHUNT_PERSISTENT)
+                insertKit(huntersStarterKitFile, huntersServerPlayerEntities, Text.literal("Go go go !").setStyle(Style.EMPTY.withColor(Formatting.LIGHT_PURPLE)))
+                ConfigManager.computeAndSave(Persistent.MANHUNT_PERSISTENT, { it.huntersStarted = true })
                 cancel()
             }
         }
+    }
 
-        // Show the hunted ones position every x seconds
-        val period = Configs.MANHUNT_CONFIG.`data`.showTheHuntedOnePositionPeriod
-        infiniteMcCoroutineTask(sync = true, client = false, period = period.seconds) {
+    private fun showTheHuntedOnesPositionsToHunters() {
+        infiniteMcCoroutineTask(sync = true, client = false, period = Configs.MANHUNT_CONFIG.`data`.showTheHuntedOnePositionPeriod.seconds) {
             huntersServerPlayerEntities.forEach { hunter ->
                 hunter.sendMessage(Text.literal("Positions for the hunted will be show below").setStyle(Style.EMPTY.withColor(Formatting.GOLD)))
                 theHuntedOnesServerPlayerEntities.forEachIndexed { index, theHunted ->
@@ -132,18 +133,21 @@ class Game(private val minecraftServer: MinecraftServer) {
                 }
             }
         }
-
     }
 
-    private fun insertKit(starterKitFile: File, serverPlayerEntity: ServerPlayerEntity) {
-        if (starterKitFile.exists()) {
-            val inventory = NbtIo.read(starterKitFile)
-            if (inventory != null) serverPlayerEntity.inventory.readNbt(inventory.get("inventory") as NbtList?)
+    private fun insertKit(kitFile: File, serverPlayerEntities: MutableSet<ServerPlayerEntity>, message: Text? = null) {
+        if (kitFile.exists()) {
+            serverPlayerEntities.forEach { serverPlayerEntity ->
+                message?.let { serverPlayerEntity.sendMessage(message) }
+                getKitAsNbtList(kitFile)?.let { serverPlayerEntity.inventory.readNbt(it) }
+            }
         }
     }
 
+    private fun getKitAsNbtList(kitFile: File) = if (kitFile.exists()) NbtIo.read(kitFile)?.let { it.get("inventory") as NbtList } else null
+
     private fun setCustomHealth(player: ServerPlayerEntity, refillHealth: Boolean = true) {
-        fun setCustomHealthImpl(amount: Double){
+        fun setCustomHealthImpl(amount: Double) {
             val maxHealthAttr = player.getAttributeInstance(EntityAttributes.GENERIC_MAX_HEALTH)!!
             maxHealthAttr.clearModifiers()
             val attributeModifier = EntityAttributeModifier(UUID.randomUUID(), "Health Modifier", amount, EntityAttributeModifier.Operation.ADDITION)
@@ -151,14 +155,8 @@ class Game(private val minecraftServer: MinecraftServer) {
             if (refillHealth) player.health = maxHealthAttr.value.toFloat()
             player.networkHandler.sendPacket(EntityAttributesS2CPacket(player.id, setOf(maxHealthAttr)))
         }
-
-        val theHuntedOnes = Configs.MANHUNT_CONFIG.`data`.theHuntedOnes
-        val hunters = Configs.MANHUNT_CONFIG.`data`.hunters
-        val theHuntedOnesHealth = Configs.MANHUNT_CONFIG.`data`.theHuntedOnesHealth
-        val huntersHealth = Configs.MANHUNT_CONFIG.`data`.huntersHealth
-
-        hunters.find { it == player.name.string }?.let{setCustomHealthImpl(huntersHealth) }
-        theHuntedOnes.find { it == player.name.string }?.let {setCustomHealthImpl(theHuntedOnesHealth) }
+        Configs.MANHUNT_CONFIG.`data`.hunters.find { it == player.name.string }?.let { setCustomHealthImpl(Configs.MANHUNT_CONFIG.`data`.huntersHealth) }
+        Configs.MANHUNT_CONFIG.`data`.theHuntedOnes.find { it == player.name.string }?.let { setCustomHealthImpl(Configs.MANHUNT_CONFIG.`data`.theHuntedOnesHealth) }
     }
 
     @Suppress("UNUSED_PARAMETER")
@@ -290,6 +288,20 @@ class Game(private val minecraftServer: MinecraftServer) {
             if (livingEntity is ServerPlayerEntity) {
                 if (livingEntity.health - amount <= 0) {
                     // TODO clear stuff that come from the respawn kit
+                    val nbtList: NbtList? = if(game.huntersServerPlayerEntities.any { it.uuidAsString == livingEntity.uuidAsString })
+                        game.getKitAsNbtList(game.huntersRespawnKitFile)
+                    else if(game.theHuntedOnesServerPlayerEntities.any { it.uuidAsString == livingEntity.uuidAsString })
+                        game.getKitAsNbtList(game.theHuntedOnesRespawnKitFile)
+                    else null
+
+                    nbtList?.let {
+                        val currentNbtList = livingEntity.inventory.writeNbt(NbtList())
+                        currentNbtList.forEach { currentNbtElement ->
+                            if(nbtList.any { it == currentNbtElement }){
+                                println("Found an item from the respawn kit")
+                            }
+                        }
+                    }
                     game.deadPlayers.add(livingEntity.uuidAsString)
                 }
             }
@@ -297,22 +309,22 @@ class Game(private val minecraftServer: MinecraftServer) {
             return ActionResult.PASS
         }
 
-        fun onEntityLoaded(entity: Entity, world: ServerWorld){
-            if(entity is ServerPlayerEntity){
-                if(game.deadPlayers.any { uuid -> uuid == entity.uuidAsString }){
+        fun onEntityLoaded(entity: Entity, world: ServerWorld) {
+            if (entity is ServerPlayerEntity) {
+                if (game.deadPlayers.any { uuid -> uuid == entity.uuidAsString }) {
                     // On respawn
                     game.setCustomHealth(entity)
                     game.deadPlayers.remove(entity.uuidAsString)
 
-                    if(game.huntersServerPlayerEntities.any { serverPlayerEntity -> serverPlayerEntity.uuidAsString == entity.uuidAsString })
-                        game.insertKit(CONFIG_DIRECTORY.resolve("respawn-kit-$THE_HUNTERS.dat").toFile(), entity)
-                    if(game.theHuntedOnesServerPlayerEntities.any { serverPlayerEntity -> serverPlayerEntity.uuidAsString == entity.uuidAsString })
-                        game.insertKit(CONFIG_DIRECTORY.resolve("respawn-kit-${THE_HUNTED_ONES}.dat").toFile(), entity)
+                    if (game.huntersServerPlayerEntities.any { serverPlayerEntity -> serverPlayerEntity.uuidAsString == entity.uuidAsString })
+                        game.insertKit(game.huntersRespawnKitFile, mutableSetOf(entity))
+                    if (game.theHuntedOnesServerPlayerEntities.any { serverPlayerEntity -> serverPlayerEntity.uuidAsString == entity.uuidAsString })
+                        game.insertKit(game.theHuntedOnesRespawnKitFile, mutableSetOf(entity))
 
-                    if(game.theHuntedOnesServerPlayerEntities.isNotEmpty()) {
+                    if (game.theHuntedOnesServerPlayerEntities.isNotEmpty()) {
                         val theHuntedOne = game.theHuntedOnesServerPlayerEntities.random()
-                        val x = (theHuntedOne.blockX-20..theHuntedOne.blockX+20).random().toDouble()
-                        val z = (theHuntedOne.blockZ-20..theHuntedOne.blockZ+20).random().toDouble()
+                        val x = (theHuntedOne.blockX - 20..theHuntedOne.blockX + 20).random().toDouble()
+                        val z = (theHuntedOne.blockZ - 20..theHuntedOne.blockZ + 20).random().toDouble()
                         entity.addStatusEffect(StatusEffectInstance(StatusEffects.RESISTANCE, 20 * 20, 100))
                         entity.teleport(theHuntedOne.world as ServerWorld, x, 320.0, z, 100f, 100f)
                     }

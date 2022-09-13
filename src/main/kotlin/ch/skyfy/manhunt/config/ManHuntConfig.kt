@@ -33,10 +33,10 @@ class DefaultManHuntConfig : Defaultable<ManHuntConfig> {
     override fun getDefault() = ManHuntConfig(
         mutableListOf(),
         mutableListOf(),
-        20,
-        20.0,
+        60,
+        30.0,
         80.0,
-        30,
+        60,
         WaitingRoom(
             Cube(10, 0.0, 310.0, 0.0),
             SpawnLocation("minecraft:overworld", 0.0, 310.0, 0.0, 180f, 2.8f)

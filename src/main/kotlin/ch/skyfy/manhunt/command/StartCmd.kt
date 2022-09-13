@@ -7,6 +7,8 @@ import ch.skyfy.manhunt.logic.persistent.Persistent
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.context.CommandContext
+import net.minecraft.item.CompassItem
+import net.minecraft.item.Items
 import net.minecraft.server.command.CommandManager.literal
 import net.minecraft.server.command.ServerCommandSource
 import net.minecraft.text.Style
@@ -14,7 +16,6 @@ import net.minecraft.text.Text
 import net.minecraft.util.Formatting
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
-
 
 class StartCmd(private val optGameRef: AtomicReference<Optional<Game>>) : Command<ServerCommandSource> {
 
@@ -25,6 +26,12 @@ class StartCmd(private val optGameRef: AtomicReference<Optional<Game>>) : Comman
 
     override fun run(context: CommandContext<ServerCommandSource>): Int {
         if (optGameRef.get().isEmpty) return Command.SINGLE_SUCCESS
+
+//        val player = context.source.player!!
+//        val item = Items.COMPASS as CompassItem
+
+//        val stack = player.getStackInHand(player.activeHand)
+        
 
         val `data` = Persistent.MANHUNT_PERSISTENT.`data`
 
