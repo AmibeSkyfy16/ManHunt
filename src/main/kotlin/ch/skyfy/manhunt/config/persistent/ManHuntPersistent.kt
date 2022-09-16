@@ -5,19 +5,19 @@ import ch.skyfy.jsonconfiglib.Validatable
 import kotlinx.serialization.Serializable
 
 @Serializable
-enum class GameState{
-    NOT_STARTED,
-    STARTING,
-    RUNNING,
-    PAUSED,
-    FINISHED
+enum class GameState(val displayName: String) {
+    NOT_STARTED("Not started"),
+    STARTING("Starting"),
+    RUNNING("Running"),
+    PAUSED("Paused"),
+    FINISHED("Finished")
 }
 
 @Serializable
 data class ManHuntPersistent(
     var gameState: GameState,
-    var huntersStarted: Boolean
-): Validatable
+    var huntersStarted: Boolean,
+) : Validatable
 
 class DefaultManHuntPersistent : Defaultable<ManHuntPersistent> {
     override fun getDefault() = ManHuntPersistent(

@@ -1,7 +1,8 @@
 package ch.skyfy.manhunt.command
 
-import ch.skyfy.jsonconfiglib.ConfigManager
+import ch.skyfy.jsonconfiglib.update
 import ch.skyfy.manhunt.config.Configs
+import ch.skyfy.manhunt.config.ManHuntConfig
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.BoolArgumentType
@@ -24,12 +25,12 @@ class DebugModeCmd : Command<ServerCommandSource> {
         val player = context.source.player ?: return Command.SINGLE_SUCCESS
 
         val value = BoolArgumentType.getBool(context, "value")
-        val configValue = Configs.MANHUNT_CONFIG.`data`.debug
+        val configValue = Configs.MANHUNT_CONFIG.serializableData.debug
 
-        if(configValue == value) player.sendMessage(Text.literal("Debug value is already false").setStyle(Style.EMPTY.withColor(Formatting.GOLD)))
+        if(configValue == value) player.sendMessage(Text.literal("Debug value is already $value").setStyle(Style.EMPTY.withColor(Formatting.GOLD)))
         else{
             player.sendMessage(Text.literal("Debug value has been set to $value").setStyle(Style.EMPTY.withColor(Formatting.GREEN)))
-            ConfigManager.computeAndSave(Configs.MANHUNT_CONFIG, {manHuntConfig -> manHuntConfig.debug = value })
+            Configs.MANHUNT_CONFIG.update(ManHuntConfig::debug, value)
         }
         return Command.SINGLE_SUCCESS
     }

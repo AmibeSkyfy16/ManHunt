@@ -30,19 +30,17 @@ import java.util.*
 
 open class BaseRole(private val game: Game, private val starterKitFile: File, protected val respawnKitFile: File) {
 
-    enum class Role {
-        HUNTER,
-        THE_HUNTED_ONE,
-        NO_ROLE
+    enum class Role(val displayName: String) {
+        HUNTER("Hunter"),
+        THE_HUNTED_ONE("The hunted one"),
+        NO_ROLE("No defined role")
     }
 
     val serverPlayerEntities: MutableSet<ServerPlayerEntity> = mutableSetOf()
 
     private val deadPlayers: MutableSet<String> = mutableSetOf()
 
-    init {
-        registerEvents()
-    }
+    init { registerEvents() }
 
     private fun registerEvents() {
         ServerPlayConnectionEvents.JOIN.register(::onPlayerJoin)
@@ -65,9 +63,9 @@ open class BaseRole(private val game: Game, private val starterKitFile: File, pr
         }
 
         if (GameUtils.isNotStarted()) {
-            if (!player.hasPermissionLevel(4) && Configs.MANHUNT_CONFIG.`data`.debug) player.changeGameMode(GameMode.ADVENTURE)
+            if (!player.hasPermissionLevel(4) && Configs.MANHUNT_CONFIG.serializableData.debug) player.changeGameMode(GameMode.ADVENTURE)
 
-            val spawnLocation = Configs.MANHUNT_CONFIG.`data`.waitingRoom.spawnLocation
+            val spawnLocation = Configs.MANHUNT_CONFIG.serializableData.waitingRoom.spawnLocation
             GameUtils.getServerWorldByIdentifier(server, spawnLocation.dimensionName).ifPresent { serverWorld ->
                 player.teleport(serverWorld, spawnLocation.x, spawnLocation.y, spawnLocation.z, spawnLocation.yaw, spawnLocation.pitch)
             }
@@ -87,17 +85,7 @@ open class BaseRole(private val game: Game, private val starterKitFile: File, pr
 
     @Suppress("UNUSED_PARAMETER")
     private fun onEntityLoaded(entity: Entity, world: ServerWorld) {
-        if (entity is ServerPlayerEntity) {
-            insertRespawnKit()
-
-            if (this is Hunters && game.theHuntedOnes.serverPlayerEntities.isNotEmpty()) {
-                val theHuntedOne = game.theHuntedOnes.serverPlayerEntities.random()
-                val x = (theHuntedOne.blockX - 40..theHuntedOne.blockX + 40).random().toDouble()
-                val z = (theHuntedOne.blockZ - 40..theHuntedOne.blockZ + 40).random().toDouble()
-                entity.addStatusEffect(StatusEffectInstance(StatusEffects.RESISTANCE, 20 * 20, 100))
-                entity.teleport(theHuntedOne.world as ServerWorld, x, 320.0, z, 100f, 100f)
-            }
-        }
+        if (entity is ServerPlayerEntity && deadPlayers.any { uuid -> uuid == entity.uuidAsString }) onPlayerRespawn(entity)
     }
 
     @Suppress("UNUSED_PARAMETER")
@@ -110,9 +98,9 @@ open class BaseRole(private val game: Game, private val starterKitFile: File, pr
         }
 
         if (livingEntity is ServerPlayerEntity) {
-            if (livingEntity.hasPermissionLevel(4) && Configs.MANHUNT_CONFIG.`data`.debug) return ActionResult.PASS
+            if (livingEntity.hasPermissionLevel(4) && Configs.MANHUNT_CONFIG.serializableData.debug) return ActionResult.PASS
             if ((GameUtils.isNotStarted() || GameUtils.isStarting())) return ActionResult.FAIL
-            if (GameUtils.isRunning() && this is Hunters && !Persistent.MANHUNT_PERSISTENT.`data`.huntersStarted) return ActionResult.FAIL
+            if (GameUtils.isRunning() && this is Hunters && !Persistent.MANHUNT_PERSISTENT.serializableData.huntersStarted) return ActionResult.FAIL
             if (livingEntity.health - amount <= 0) onPlayerDeath(livingEntity)
         }
 
@@ -121,22 +109,22 @@ open class BaseRole(private val game: Game, private val starterKitFile: File, pr
 
     @Suppress("UNUSED_PARAMETER")
     private fun onPlayerMove(moveData: PlayerMoveCallback.MoveData, player: ServerPlayerEntity): ActionResult {
-        if (player.hasPermissionLevel(4) && Configs.MANHUNT_CONFIG.`data`.debug) return ActionResult.PASS
+        if (player.hasPermissionLevel(4) && Configs.MANHUNT_CONFIG.serializableData.debug) return ActionResult.PASS
 
         if (GameUtils.isFinished()) return ActionResult.PASS
         if (GameUtils.isPaused()) return ActionResult.FAIL
 
         if (GameUtils.isNotStarted() || GameUtils.isStarting()) {
-            val waitingRoom = Configs.MANHUNT_CONFIG.`data`.waitingRoom
+            val waitingRoom = Configs.MANHUNT_CONFIG.serializableData.waitingRoom
             if (MathUtils.cancelPlayerFromLeavingAnArea(player, waitingRoom.cube, waitingRoom.spawnLocation)) return ActionResult.FAIL
         }
 
         if (GameUtils.isRunning()) {
 
             // Hunters have to wait their custom delayed start before walking !
-            if (this is Hunters && !Persistent.MANHUNT_PERSISTENT.`data`.huntersStarted) {
+            if (this is Hunters && !Persistent.MANHUNT_PERSISTENT.serializableData.huntersStarted) {
                 serverPlayerEntities.find { it.uuidAsString === player.uuidAsString }?.let {
-                    val waitingRoom = Configs.MANHUNT_CONFIG.`data`.waitingRoom
+                    val waitingRoom = Configs.MANHUNT_CONFIG.serializableData.waitingRoom
                     if (MathUtils.cancelPlayerFromLeavingAnArea(player, waitingRoom.cube, waitingRoom.spawnLocation)) return ActionResult.FAIL
                 }
             }
@@ -144,6 +132,19 @@ open class BaseRole(private val game: Game, private val starterKitFile: File, pr
         }
 
         return ActionResult.PASS
+    }
+
+    private fun onPlayerRespawn(serverPlayerEntity: ServerPlayerEntity) {
+        insertKit(respawnKitFile, mutableSetOf(serverPlayerEntity))
+        setCustomHealth(serverPlayerEntity, true)
+
+        if (this is Hunters && game.theHuntedOnes.serverPlayerEntities.isNotEmpty()) {
+            val theHuntedOne = game.theHuntedOnes.serverPlayerEntities.random()
+            val x = (theHuntedOne.blockX - 40..theHuntedOne.blockX + 40).random().toDouble()
+            val z = (theHuntedOne.blockZ - 40..theHuntedOne.blockZ + 40).random().toDouble()
+            serverPlayerEntity.addStatusEffect(StatusEffectInstance(StatusEffects.RESISTANCE, 20 * 20, 100))
+            serverPlayerEntity.teleport(theHuntedOne.world as ServerWorld, x, 320.0, z, 100f, 100f)
+        }
     }
 
     private fun setCustomHealth(player: ServerPlayerEntity, refillHealth: Boolean = true) {
@@ -156,7 +157,7 @@ open class BaseRole(private val game: Game, private val starterKitFile: File, pr
             player.networkHandler.sendPacket(EntityAttributesS2CPacket(player.id, setOf(maxHealthAttr)))
         }
 
-        val manHuntConfig = Configs.MANHUNT_CONFIG.`data`
+        val manHuntConfig = Configs.MANHUNT_CONFIG.serializableData
         val health = when (GameUtils.getPlayerRole(player.name.string)) {
             Role.HUNTER -> manHuntConfig.huntersHealth
             Role.THE_HUNTED_ONE -> manHuntConfig.theHuntedOnesHealth
@@ -167,7 +168,7 @@ open class BaseRole(private val game: Game, private val starterKitFile: File, pr
         setCustomHealthImpl(health)
     }
 
-    private fun insertKit(kitFile: File, message: Text? = null) {
+     private fun insertKit(kitFile: File, serverPlayerEntities: MutableSet<ServerPlayerEntity> = this.serverPlayerEntities, message: Text? = null) {
         if (kitFile.exists()) {
             serverPlayerEntities.forEach { serverPlayerEntity ->
                 message?.let { serverPlayerEntity.sendMessage(message) }
@@ -176,10 +177,8 @@ open class BaseRole(private val game: Game, private val starterKitFile: File, pr
         }
     }
 
-    fun insertStarterKit(message: Text? = null) = insertKit(starterKitFile, message)
-    private fun insertRespawnKit(message: Text? = null) = insertKit(respawnKitFile, message)
+    fun insertStarterKit(serverPlayerEntities: MutableSet<ServerPlayerEntity> = this.serverPlayerEntities, message: Text? = null) = insertKit(starterKitFile, serverPlayerEntities, message = message)
 
     fun getKitAsNbtList(kitFile: File) = if (kitFile.exists()) NbtIo.read(kitFile)?.let { it.get("inventory") as NbtList } else null
-
 
 }

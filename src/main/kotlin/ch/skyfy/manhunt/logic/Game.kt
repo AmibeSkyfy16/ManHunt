@@ -1,9 +1,10 @@
 package ch.skyfy.manhunt.logic
 
-import ch.skyfy.jsonconfiglib.ConfigManager
+import ch.skyfy.jsonconfiglib.update
 import ch.skyfy.manhunt.config.Configs
 import ch.skyfy.manhunt.config.persistent.GameState
-import ch.skyfy.manhunt.config.persistent.Persistent
+import ch.skyfy.manhunt.config.persistent.ManHuntPersistent
+import ch.skyfy.manhunt.config.persistent.Persistent.MANHUNT_PERSISTENT
 import kotlinx.coroutines.cancel
 import net.minecraft.server.MinecraftServer
 import net.minecraft.text.Style
@@ -15,15 +16,23 @@ import kotlin.time.Duration.Companion.seconds
 
 class Game(private val minecraftServer: MinecraftServer) {
 
-    private val timeline: Timeline = Timeline()
+    private val timeline = Timeline()
+
+    private val scoreboardManager = ScoreboardManager(minecraftServer)
 
     private val hunters = Hunters(this, minecraftServer)
+
     val theHuntedOnes = TheHuntedOnes(this)
+
+    init {
+        MANHUNT_PERSISTENT.registerOnUpdate { scoreboardManager.updateSideboard() }
+        MANHUNT_PERSISTENT.registerOnReload { scoreboardManager.updateSideboard() }
+    }
 
     fun cooldownStart() {
 
-        val gamers = hunters.serverPlayerEntities + theHuntedOnes.serverPlayerEntities
-        gamers.forEach { serverPlayerEntity ->
+        // Clear inventory and effect for all gamers
+        (hunters.serverPlayerEntities + theHuntedOnes.serverPlayerEntities).forEach { serverPlayerEntity ->
             serverPlayerEntity.clearStatusEffects()
             serverPlayerEntity.inventory.clear()
         }
@@ -40,21 +49,20 @@ class Game(private val minecraftServer: MinecraftServer) {
     }
 
     private fun start() {
-
-        ConfigManager.computeAndSave(Persistent.MANHUNT_PERSISTENT, { it.gameState = GameState.RUNNING })
+        MANHUNT_PERSISTENT.update(ManHuntPersistent::gameState, GameState.RUNNING)
 
         timeline.startTimer()
 
-        hunters.insertStarterKit(Text.literal("Good Luck Buddies ! Run run run").setStyle(Style.EMPTY.withColor(Formatting.GREEN)))
+        hunters.insertStarterKit(message = Text.literal("Good Luck Buddies ! Run run run").setStyle(Style.EMPTY.withColor(Formatting.GREEN)))
 
         hunters.delayedStartForHunters()
 
         showTheHuntedOnesPositionsToHunters()
-
     }
 
     private fun showTheHuntedOnesPositionsToHunters() {
-        infiniteMcCoroutineTask(sync = true, client = false, period = Configs.MANHUNT_CONFIG.`data`.showTheHuntedOnePositionPeriod.seconds) {
+        infiniteMcCoroutineTask(sync = true, client = false, period = Configs.MANHUNT_CONFIG.serializableData.showTheHuntedOnePositionPeriod.seconds) {
+            if (!GameUtils.isRunning()) return@infiniteMcCoroutineTask
             hunters.serverPlayerEntities.forEach { hunter ->
                 hunter.sendMessage(Text.literal("Positions for the hunted will be show below").setStyle(Style.EMPTY.withColor(Formatting.GOLD)))
                 theHuntedOnes.serverPlayerEntities.forEachIndexed { index, theHunted ->

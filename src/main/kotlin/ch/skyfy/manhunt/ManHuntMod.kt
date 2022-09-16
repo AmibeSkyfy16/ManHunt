@@ -40,8 +40,8 @@ class ManHuntMod : ModInitializer {
 
         startCmd = StartCmd(optGameRef)
         createStarterKitCmd = CreateStarterKitCmd(optGameRef)
-        reloadConfigCmd = ReloadConfigCmd()
-        reloadPersistentCmd = ReloadPersistentCmd()
+        reloadConfigCmd = ReloadConfigCmd(optGameRef)
+        reloadPersistentCmd = ReloadPersistentCmd(optGameRef)
         debugModeCmd = DebugModeCmd()
     }
 
