@@ -1,6 +1,6 @@
 package ch.skyfy.manhunt.logic
 
-import ch.skyfy.manhunt.config.persistent.Persistent
+import ch.skyfy.manhunt.config.persistent.Persistent.MANHUNT_PERSISTENT
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents
@@ -39,7 +39,7 @@ class ScoreboardManager(private val minecraftServer: MinecraftServer) {
             val playerUUID = entity.uuidAsString
             if(sideboards.none { it.uuid == playerUUID }){
                 val roleLine = SideboardLine.Updatable("Role: ${GameUtils.getPlayerRole(entity.name.string)}".literal)
-                val gameStateLine = SideboardLine.Updatable("Status: ${Persistent.MANHUNT_PERSISTENT.serializableData.gameState.displayName}".literal)
+                val gameStateLine = SideboardLine.Updatable("Status: ${MANHUNT_PERSISTENT.serializableData.gameState.displayName}".literal)
                 val mySideboard = sideboard("<< Main Board >>".literal) {
                     line(Text.empty())
                     line(roleLine)
@@ -55,16 +55,12 @@ class ScoreboardManager(private val minecraftServer: MinecraftServer) {
         }
     }
 
-    fun updateSideboard(){
-        minecraftServer.playerManager.playerList.forEach { serverPlayerEntity ->
-            updateSideBoard(serverPlayerEntity.uuidAsString, serverPlayerEntity.name.string)
-        }
-    }
+    fun updateSideboard() = minecraftServer.playerManager.playerList.forEach { updateSideBoard(it.uuidAsString, it.name.string) }
 
     private fun updateSideBoard(uuid: String, playerName: String){
         sideboards.find { it.uuid == uuid }?.let {
             it.roleLine.launchUpdate("Role: ${GameUtils.getPlayerRole(playerName).displayName}".literal.setStyle(Style.EMPTY.withColor(Formatting.GOLD)))
-            it.gameStateLine.launchUpdate("Status: ${Persistent.MANHUNT_PERSISTENT.serializableData.gameState.displayName}".literal.setStyle(Style.EMPTY.withColor(Formatting.GOLD)))
+            it.gameStateLine.launchUpdate("Status: ${MANHUNT_PERSISTENT.serializableData.gameState.displayName}".literal.setStyle(Style.EMPTY.withColor(Formatting.GOLD)))
         }
     }
 

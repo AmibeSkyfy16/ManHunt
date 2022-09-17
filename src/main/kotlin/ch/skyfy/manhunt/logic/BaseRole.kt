@@ -63,7 +63,8 @@ open class BaseRole(private val game: Game, private val starterKitFile: File, pr
         }
 
         if (GameUtils.isNotStarted()) {
-            if (!player.hasPermissionLevel(4) && Configs.MANHUNT_CONFIG.serializableData.debug) player.changeGameMode(GameMode.ADVENTURE)
+            if (!player.hasPermissionLevel(4) && !Configs.MANHUNT_CONFIG.serializableData.debug)
+                player.changeGameMode(GameMode.ADVENTURE)
 
             val spawnLocation = Configs.MANHUNT_CONFIG.serializableData.waitingRoom.spawnLocation
             GameUtils.getServerWorldByIdentifier(server, spawnLocation.dimensionName).ifPresent { serverWorld ->
@@ -100,7 +101,7 @@ open class BaseRole(private val game: Game, private val starterKitFile: File, pr
         if (livingEntity is ServerPlayerEntity) {
             if (livingEntity.hasPermissionLevel(4) && Configs.MANHUNT_CONFIG.serializableData.debug) return ActionResult.PASS
             if ((GameUtils.isNotStarted() || GameUtils.isStarting())) return ActionResult.FAIL
-            if (GameUtils.isRunning() && this is Hunters && !Persistent.MANHUNT_PERSISTENT.serializableData.huntersStarted) return ActionResult.FAIL
+            if (GameUtils.isRunning() && this is Hunters && serverPlayerEntities.any { it.uuidAsString == livingEntity.uuidAsString } && !Persistent.MANHUNT_PERSISTENT.serializableData.huntersStarted) return ActionResult.FAIL
             if (livingEntity.health - amount <= 0) onPlayerDeath(livingEntity)
         }
 

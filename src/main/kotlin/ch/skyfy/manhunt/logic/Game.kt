@@ -53,7 +53,7 @@ class Game(private val minecraftServer: MinecraftServer) {
 
         timeline.startTimer()
 
-        hunters.insertStarterKit(message = Text.literal("Good Luck Buddies ! Run run run").setStyle(Style.EMPTY.withColor(Formatting.GREEN)))
+        theHuntedOnes.insertStarterKit(message = Text.literal("Good Luck Buddies ! Run run run").setStyle(Style.EMPTY.withColor(Formatting.GREEN)))
 
         hunters.delayedStartForHunters()
 
