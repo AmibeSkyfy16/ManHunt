@@ -1,14 +1,13 @@
 package ch.skyfy.manhunt.command
 
-import ch.skyfy.jsonconfiglib.ConfigManager
+import ch.skyfy.jsonconfiglib.update
+import ch.skyfy.manhunt.config.persistent.GameState
+import ch.skyfy.manhunt.config.persistent.ManHuntPersistent
+import ch.skyfy.manhunt.config.persistent.Persistent
 import ch.skyfy.manhunt.logic.Game
-import ch.skyfy.manhunt.logic.persistent.GameState
-import ch.skyfy.manhunt.logic.persistent.Persistent
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.context.CommandContext
-import net.minecraft.item.CompassItem
-import net.minecraft.item.Items
 import net.minecraft.server.command.CommandManager.literal
 import net.minecraft.server.command.ServerCommandSource
 import net.minecraft.text.Style
@@ -26,18 +25,15 @@ class StartCmd(private val optGameRef: AtomicReference<Optional<Game>>) : Comman
 
     override fun run(context: CommandContext<ServerCommandSource>): Int {
         if (optGameRef.get().isEmpty) return Command.SINGLE_SUCCESS
+        val game = optGameRef.get().get()
 
 //        val player = context.source.player!!
 //        val item = Items.COMPASS as CompassItem
-
 //        val stack = player.getStackInHand(player.activeHand)
-        
 
-        val `data` = Persistent.MANHUNT_PERSISTENT.`data`
-
-        if (`data`.gameState == GameState.NOT_STARTED) {
-            `data`.gameState = GameState.STARTING
-            ConfigManager.save(Persistent.MANHUNT_PERSISTENT)
+        val configData = Persistent.MANHUNT_PERSISTENT
+        if (configData.serializableData.gameState == GameState.NOT_STARTED) {
+            configData.update(ManHuntPersistent::gameState, GameState.STARTING)
             optGameRef.get().ifPresent(Game::cooldownStart)
         } else context.source.player?.sendMessage(Text.literal("The game is already started").setStyle(Style.EMPTY.withColor(Formatting.RED)))
 

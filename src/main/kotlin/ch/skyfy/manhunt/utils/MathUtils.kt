@@ -1,7 +1,7 @@
 package ch.skyfy.manhunt.utils
 
-import ch.skyfy.manhunt.data.Cube
-import ch.skyfy.manhunt.data.SpawnLocation
+import ch.skyfy.manhunt.config.Cube
+import ch.skyfy.manhunt.config.SpawnLocation
 import net.minecraft.server.network.ServerPlayerEntity
 import net.minecraft.util.math.Vec3d
 
