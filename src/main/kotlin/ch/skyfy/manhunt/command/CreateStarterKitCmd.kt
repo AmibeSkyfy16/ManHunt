@@ -38,8 +38,23 @@ class CreateStarterKitCmd(private val optGameRef: AtomicReference<Optional<Game>
     }
 
     override fun run(context: CommandContext<ServerCommandSource>): Int {
-        if (optGameRef.get().isEmpty) return Command.SINGLE_SUCCESS
-        val player = context.source.player ?: return Command.SINGLE_SUCCESS
+
+        if (!context.source.hasPermissionLevel(4)) {
+            context.source.sendMessage(Text.literal("This command required permission level 4").setStyle(Style.EMPTY.withColor(Formatting.RED)))
+            return Command.SINGLE_SUCCESS
+        }
+
+        val player = context.source.player
+
+        if(player == null){
+            context.source.sendMessage(Text.literal("This command must be executed by a player").setStyle(Style.EMPTY.withColor(Formatting.RED)))
+            return Command.SINGLE_SUCCESS
+        }
+
+        if(optGameRef.get().isEmpty){
+            context.source.sendMessage(Text.literal("The server is not yet fully ready (Game object is null)").setStyle(Style.EMPTY.withColor(Formatting.GOLD)))
+            return Command.SINGLE_SUCCESS
+        }
 
         val name = context.nodes[1].node.name
         val kitName = context.nodes[3].node.name

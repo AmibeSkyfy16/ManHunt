@@ -30,6 +30,7 @@ class ManHuntMod : ModInitializer {
 
     private val startCmd: StartCmd
     private val createStarterKitCmd: CreateStarterKitCmd
+    private val getKitCmd: GetKitCmd
     private val reloadConfigCmd: ReloadConfigCmd
     private val reloadPersistentCmd: ReloadPersistentCmd
     private val debugModeCmd: DebugModeCmd
@@ -40,9 +41,10 @@ class ManHuntMod : ModInitializer {
 
         startCmd = StartCmd(optGameRef)
         createStarterKitCmd = CreateStarterKitCmd(optGameRef)
+        getKitCmd = GetKitCmd(optGameRef)
         reloadConfigCmd = ReloadConfigCmd(optGameRef)
         reloadPersistentCmd = ReloadPersistentCmd(optGameRef)
-        debugModeCmd = DebugModeCmd()
+        debugModeCmd = DebugModeCmd(optGameRef)
     }
 
     override fun onInitialize() {
@@ -54,6 +56,7 @@ class ManHuntMod : ModInitializer {
         CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
             startCmd.register(dispatcher)
             createStarterKitCmd.register(dispatcher)
+            getKitCmd.register(dispatcher)
             reloadConfigCmd.register(dispatcher)
             reloadPersistentCmd.register(dispatcher)
             debugModeCmd.register(dispatcher)
