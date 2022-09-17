@@ -24,12 +24,16 @@ class StartCmd(private val optGameRef: AtomicReference<Optional<Game>>) : Comman
     }
 
     override fun run(context: CommandContext<ServerCommandSource>): Int {
-        if (optGameRef.get().isEmpty) return Command.SINGLE_SUCCESS
-        val game = optGameRef.get().get()
 
-//        val player = context.source.player!!
-//        val item = Items.COMPASS as CompassItem
-//        val stack = player.getStackInHand(player.activeHand)
+        if (!context.source.hasPermissionLevel(4)) {
+            context.source.sendMessage(Text.literal("This command required permission level 4").setStyle(Style.EMPTY.withColor(Formatting.RED)))
+            return Command.SINGLE_SUCCESS
+        }
+
+        if(optGameRef.get().isEmpty){
+            context.source.sendMessage(Text.literal("The server is not yet fully ready (Game object is null)").setStyle(Style.EMPTY.withColor(Formatting.GOLD)))
+            return Command.SINGLE_SUCCESS
+        }
 
         val configData = Persistent.MANHUNT_PERSISTENT
         if (configData.serializableData.gameState == GameState.NOT_STARTED) {
