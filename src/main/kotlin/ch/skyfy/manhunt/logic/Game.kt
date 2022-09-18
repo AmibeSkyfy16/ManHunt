@@ -57,9 +57,10 @@ class Game(private val minecraftServer: MinecraftServer) {
 
         hunters.delayedStartForHunters()
 
-        showTheHuntedOnesPositionsToHunters()
+//        showTheHuntedOnesPositionsToHunters()
     }
 
+    @Deprecated("Use tracking compass now")
     private fun showTheHuntedOnesPositionsToHunters() {
         infiniteMcCoroutineTask(sync = true, client = false, period = Configs.MANHUNT_CONFIG.serializableData.showTheHuntedOnePositionPeriod.seconds) {
             if (!GameUtils.isRunning()) return@infiniteMcCoroutineTask
