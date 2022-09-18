@@ -7,8 +7,10 @@
     "GetEntryAccessor",
     "HealthAccessor",
     "LivingEntityMixin",
+    "PlayerEntityMixin",
     "ServerPlayerEntityMixin",
-    "ServerPlayNetworkHandlerMixin"
+    "ServerPlayNetworkHandlerMixin",
+    "SwordItemMixin"
   ],
   "server": [
   ],
