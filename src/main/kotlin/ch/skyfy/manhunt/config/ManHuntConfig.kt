@@ -36,6 +36,7 @@ data class ManHuntConfig(
     val huntersHealth: Double,
     val theHuntedOnesHealth: Double,
     val showTheHuntedOnePositionPeriod: Int,
+    val updateTrackingCompassPeriod: Int,
     val waitingRoom: WaitingRoom,
     var debug: Boolean
 ) : Validatable {
@@ -52,6 +53,7 @@ class DefaultManHuntConfig : Defaultable<ManHuntConfig> {
         60,
         30.0,
         80.0,
+        60,
         60,
         WaitingRoom(
             Cube(10, 0.0, 310.0, 0.0),

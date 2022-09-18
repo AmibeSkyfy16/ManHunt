@@ -30,7 +30,7 @@ class StartCmd(private val optGameRef: AtomicReference<Optional<Game>>) : Comman
             return Command.SINGLE_SUCCESS
         }
 
-        if(optGameRef.get().isEmpty){
+        if (optGameRef.get().isEmpty) {
             context.source.sendMessage(Text.literal("The server is not yet fully ready (Game object is null)").setStyle(Style.EMPTY.withColor(Formatting.GOLD)))
             return Command.SINGLE_SUCCESS
         }
