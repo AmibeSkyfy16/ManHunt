@@ -18,7 +18,7 @@ import net.minecraft.util.Formatting
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 
-class CreateStarterKitCmd(private val optGameRef: AtomicReference<Optional<Game>>) : Command<ServerCommandSource> {
+class CreateKitCmd(private val optGameRef: AtomicReference<Optional<Game>>) : Command<ServerCommandSource> {
 
     fun register(dispatcher: CommandDispatcher<ServerCommandSource>) {
         val literal = literal("create-kit")

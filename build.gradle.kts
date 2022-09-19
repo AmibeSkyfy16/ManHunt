@@ -48,7 +48,7 @@ dependencies {
     modImplementation("net.fabricmc:fabric-language-kotlin:${properties["fabric_kotlin_version"]}")
     modImplementation("net.silkmc:silk-game:${properties["silk_version"]}")
 
-    transitiveInclude(implementation("ch.skyfy.jsonconfiglib:json-config-lib:3.0.5")!!)
+    transitiveInclude(implementation("ch.skyfy.jsonconfiglib:json-config-lib:3.0.9")!!)
 
     handleIncludes(project, transitiveInclude)
 

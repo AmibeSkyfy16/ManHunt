@@ -22,14 +22,15 @@ class ManHuntMod : ModInitializer {
         const val THE_HUNTERS = "the-hunters"
         const val THE_HUNTED_ONES = "the-hunted-ones"
         val CONFIG_DIRECTORY: Path = FabricLoader.getInstance().configDir.resolve(MOD_ID)
-        val PERSISTENT_DIRECTORY: Path = CONFIG_DIRECTORY.resolve("persistent")
+        val DATA_DIRECTORY: Path = CONFIG_DIRECTORY.resolve(arrayOf("d", "a", "t", "a").joinToString())
         val LOGGER: Logger = LogManager.getLogger(ManHuntMod::class.java)
     }
 
     private val optGameRef: AtomicReference<Optional<Game>> = AtomicReference(Optional.empty())
 
     private val startCmd: StartCmd
-    private val createStarterKitCmd: CreateStarterKitCmd
+    private val createKitCmd: CreateKitCmd
+    private val createBonusCmd: CreateBonusCmd
     private val getKitCmd: GetKitCmd
     private val reloadConfigCmd: ReloadConfigCmd
     private val reloadPersistentCmd: ReloadPersistentCmd
@@ -40,7 +41,8 @@ class ManHuntMod : ModInitializer {
         ConfigManager.loadConfigs(arrayOf(Configs.javaClass))
 
         startCmd = StartCmd(optGameRef)
-        createStarterKitCmd = CreateStarterKitCmd(optGameRef)
+        createKitCmd = CreateKitCmd(optGameRef)
+        createBonusCmd = CreateBonusCmd(optGameRef)
         getKitCmd = GetKitCmd(optGameRef)
         reloadConfigCmd = ReloadConfigCmd(optGameRef)
         reloadPersistentCmd = ReloadPersistentCmd(optGameRef)
@@ -55,7 +57,8 @@ class ManHuntMod : ModInitializer {
     private fun registerCommands() {
         CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
             startCmd.register(dispatcher)
-            createStarterKitCmd.register(dispatcher)
+            createKitCmd.register(dispatcher)
+            createBonusCmd.register(dispatcher)
             getKitCmd.register(dispatcher)
             reloadConfigCmd.register(dispatcher)
             reloadPersistentCmd.register(dispatcher)

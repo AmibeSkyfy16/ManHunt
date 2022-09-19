@@ -35,12 +35,11 @@ data class ManHuntConfig(
     val huntersDelay: Int,
     val huntersHealth: Double,
     val theHuntedOnesHealth: Double,
-    val showTheHuntedOnePositionPeriod: Int,
+    @Deprecated("Use updateTrackingCompassPeriod") val showTheHuntedOnePositionPeriod: Int,
     val updateTrackingCompassPeriod: Int,
     val waitingRoom: WaitingRoom,
     var debug: Boolean
 ) : Validatable {
-
     override fun validateImpl(errors: MutableList<String>) {
         super.validateImpl(errors)
     }

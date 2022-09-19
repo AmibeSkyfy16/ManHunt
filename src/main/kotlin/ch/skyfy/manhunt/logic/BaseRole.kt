@@ -5,6 +5,7 @@ import ch.skyfy.manhunt.callbacks.PlayerMoveCallback
 import ch.skyfy.manhunt.config.Configs
 import ch.skyfy.manhunt.config.persistent.Persistent
 import ch.skyfy.manhunt.utils.MathUtils
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents
 import net.fabricmc.fabric.api.networking.v1.PacketSender
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents
@@ -89,12 +90,18 @@ open class BaseRole(private val game: Game, private val starterKitFile: File, pr
         if (entity is ServerPlayerEntity && deadPlayers.any { uuid -> uuid == entity.uuidAsString }) onPlayerRespawn(entity)
     }
 
-    @Suppress("UNUSED_PARAMETER")
     private fun onPlayerDamage(livingEntity: LivingEntity, damageSource: DamageSource, amount: Float): ActionResult {
         fun onPlayerDeath(serverPlayerEntity: ServerPlayerEntity) {
             if (this is Hunters) {
                 this.clearKit(serverPlayerEntity)
                 deadPlayers.add(livingEntity.uuidAsString)
+
+                // Give to the hunted one a bonus stuff
+                if(damageSource.attacker is ServerPlayerEntity){
+                    val attacker = damageSource.attacker as ServerPlayerEntity
+                    if(game.theHuntedOnes.serverPlayerEntities.any { it.uuidAsString == attacker.uuidAsString })
+                        game.theHuntedOnes.giveBonus(attacker)
+                }
             }
         }
 
