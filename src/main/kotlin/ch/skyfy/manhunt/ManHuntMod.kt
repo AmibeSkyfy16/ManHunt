@@ -22,7 +22,7 @@ class ManHuntMod : ModInitializer {
         const val THE_HUNTERS = "the-hunters"
         const val THE_HUNTED_ONES = "the-hunted-ones"
         val CONFIG_DIRECTORY: Path = FabricLoader.getInstance().configDir.resolve(MOD_ID)
-        val DATA_DIRECTORY: Path = CONFIG_DIRECTORY.resolve(arrayOf("d", "a", "t", "a").joinToString())
+        val DATA_DIRECTORY: Path = CONFIG_DIRECTORY.resolve(arrayOf("d", "a", "t", "a").joinToString(""))
         val LOGGER: Logger = LogManager.getLogger(ManHuntMod::class.java)
     }
 

@@ -17,6 +17,7 @@ import net.minecraft.server.command.ServerCommandSource
 import net.minecraft.text.Style
 import net.minecraft.text.Text
 import net.minecraft.util.Formatting
+import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 
@@ -24,7 +25,7 @@ class CreateBonusCmd(private val optGameRef: AtomicReference<Optional<Game>>) : 
 
     companion object{
         const val KILL_HUNTERS_BONUS = "kill-hunters-bonus"
-        val KILL_HUNTERS_BONUS_PATH = CONFIG_DIRECTORY.resolve("$THE_HUNTED_ONES-$KILL_HUNTERS_BONUS.dat")
+        val KILL_HUNTERS_BONUS_PATH: Path = CONFIG_DIRECTORY.resolve("$THE_HUNTED_ONES-$KILL_HUNTERS_BONUS.dat")
     }
 
     fun register(dispatcher: CommandDispatcher<ServerCommandSource>) {
@@ -56,11 +57,6 @@ class CreateBonusCmd(private val optGameRef: AtomicReference<Optional<Game>>) : 
         val roleName = context.nodes[1].node.name
         val bonusName = context.nodes[2].node.name
 
-//        val filename: String
-//        if(roleName == THE_HUNTED_ONES && bonusName == KILL_HUNTERS_BONUS){
-//            filename = KILL_HUNTERS_BONUS_PATH.fileName.toString()
-//        }
-
         val filename = "$roleName-$bonusName.dat"
 
         val nbtList = player.inventory.writeNbt(NbtList())
@@ -69,17 +65,6 @@ class CreateBonusCmd(private val optGameRef: AtomicReference<Optional<Game>>) : 
         NbtIo.write(nbtCompound, CONFIG_DIRECTORY.resolve(filename).toFile())
 
         player.sendMessage(Text.literal("You have successfully save your inventory acting as bonus ($bonusName)").setStyle(Style.EMPTY.withColor(Formatting.GREEN)))
-
-        //test
-//        (if (KILL_HUNTERS_BONUS_PATH.toFile().exists()) NbtIo.read(KILL_HUNTERS_BONUS_PATH.toFile())?.let { it.get("inventory") as NbtList } else null)?.let{
-//            it.forEach {nbtElement ->
-//                if(nbtElement is NbtCompound){
-//                    val itemStack = ItemStack.fromNbt(nbtElement)
-//                    player.dropItem(itemStack.copy(), false, false)
-//                }
-//            }
-//            println()
-//        }
 
         return Command.SINGLE_SUCCESS
     }

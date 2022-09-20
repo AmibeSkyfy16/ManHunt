@@ -5,7 +5,6 @@ import ch.skyfy.manhunt.callbacks.PlayerMoveCallback
 import ch.skyfy.manhunt.config.Configs
 import ch.skyfy.manhunt.config.persistent.Persistent
 import ch.skyfy.manhunt.utils.MathUtils
-import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents
 import net.fabricmc.fabric.api.networking.v1.PacketSender
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents
