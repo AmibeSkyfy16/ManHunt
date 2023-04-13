@@ -12,12 +12,15 @@
 
 @file:Suppress("GradlePackageVersionRange")
 
+import org.jetbrains.kotlin.gradle.plugin.mpp.pm20.archivesName
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 val transitiveInclude: Configuration by configurations.creating
 
 plugins {
-    id("fabric-loom") version "1.1-SNAPSHOT"
-    id("org.jetbrains.kotlin.jvm") version "1.8.20"
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.8.20"
+    id("fabric-loom") version "1.0-SNAPSHOT"
+    id("org.jetbrains.kotlin.jvm") version "1.7.10"
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.7.10"
     idea
 }
 
@@ -29,10 +32,22 @@ base {
 
 repositories {
     mavenCentral()
+    mavenLocal()
     maven("https://maven.bymartrixx.me")
     maven("https://jitpack.io")
     maven("https://maven.nucleoid.xyz")
-    maven("https://repo.repsy.io/mvn/amibeskyfy16/repo") // jsonconfiglib
+    maven("https://repo.repsy.io/mvn/amibeskyfy16/repo") // Use for my JsonConfig lib
+}
+
+configurations {
+    includeAndExpose
+
+    modApi {
+        extendsFrom includeAndExpose
+    }
+    include {
+        extendsFrom includeAndExpose
+    }
 }
 
 dependencies {
@@ -44,11 +59,13 @@ dependencies {
     modImplementation("net.fabricmc:fabric-language-kotlin:${properties["fabric_kotlin_version"]}")
     modImplementation("net.silkmc:silk-game:${properties["silk_version"]}")
 
-    transitiveInclude(implementation("ch.skyfy.jsonconfiglib:json-config-lib:3.0.14")!!)
+//    transitiveInclude(implementation("ch.skyfy.jsonconfiglib:json-config-lib:3.0.9")!!)
+
+
 
     handleIncludes(project, transitiveInclude)
 
-    testImplementation("org.jetbrains.kotlin:kotlin-test:1.8.20")
+    testImplementation("org.jetbrains.kotlin:kotlin-test:1.7.10")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4")
 }
 tasks {
@@ -63,108 +80,37 @@ tasks {
         }
     }
 
-    loom {
-        runs {
-            this.getByName("client") {
-                runDir = "testclient"
-
-                val file = File("preconfiguration/doneclient.txt")
-                if (!file.exists()) {
-                    println("copying to client")
-                    file.createNewFile()
-
-                    // Copy some default files to the test client
-                    copy {
-                        from("preconfiguration/prepared_client/.")
-                        into("testclient")
-                        include("options.txt") // options.txt with my favorite settings
-                    }
-
-                    // Copying the world to use
-                    copy {
-                        from("preconfiguration/worlds/.")
-                        include("testworld#1/**")
-                        into("testclient/saves")
-                    }
-
-                    // Copying useful mods
-                    copy {
-                        from("preconfiguration/mods/client/.", "preconfiguration/mods/both/.")
-                        include("*.jar")
-                        into("testclient/mods")
-                    }
-
-                }
-            }
-            this.getByName("server") {
-                runDir = "testserver"
-
-                val file = File("preconfiguration/doneserver.txt")
-                if (!file.exists()) {
-                    file.createNewFile()
-                    println("copying to server")
-
-                    // Copy some default files to the test server
-                    copy {
-                        from("preconfiguration/prepared_server/.")
-                        include("server.properties") // server.properties configured with usefully settings
-                        include("eula.txt") // Accepted eula
-                        into("testserver")
-                    }
-
-                    // Copying the world to use
-                    copy {
-                        from("preconfiguration/worlds/.")
-                        include("testworld#1/**")
-                        into("testserver")
-                    }
-
-                    // Copying useful mods
-                    copy {
-                        from("preconfiguration/mods/server/.", "preconfiguration/mods/both/.")
-                        include("*.jar")
-                        into("testserver/mods")
-                    }
-                }
-            }
-        }
-    }
-
     java {
-        toolchain {
-//            languageVersion.set(JavaLanguageVersion.of(javaVersion.toString()))
-//            vendor.set(JvmVendorSpec.BELLSOFT)
-        }
         withSourcesJar()
-        withJavadocJar()
+
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(javaVersion.toString()))
+            vendor.set(JvmVendorSpec.BELLSOFT)
+        }
     }
 
     named<Wrapper>("wrapper") {
-        gradleVersion = "8.1"
-        distributionType = Wrapper.DistributionType.BIN
+        gradleVersion = "7.5.1"
+        distributionType = Wrapper.DistributionType.ALL
     }
 
-    named<Javadoc>("javadoc") {
-        options {
-            (this as CoreJavadocOptions).addStringOption("Xdoclint:none", "-quiet")
-        }
-    }
-
-    named<Jar>("jar") {
-        from("LICENSE") { rename { "${it}_${base.archivesName.get()}" } }
-    }
-
-    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    named<KotlinCompile>("compileKotlin") {
         kotlinOptions.jvmTarget = javaVersion.toString()
         kotlinOptions.freeCompilerArgs += "-Xskip-prerelease-check" // Required by others project like SilkMC. Also add this to intellij setting under Compiler -> Kotlin Compiler -> Additional ...
     }
 
-    withType<JavaCompile>().configureEach {
+    named<JavaCompile>("compileJava") {
         options.encoding = "UTF-8"
         options.release.set(javaVersion.toString().toInt())
     }
 
-    named<Test>("test") {// https://stackoverflow.com/questions/40954017/gradle-how-to-get-output-from-test-stderr-stdout-into-console
+    named<Jar>("jar") {
+        from("LICENSE") {
+            rename { "${it}_${archivesName}" }
+        }
+    }
+
+    named<Test>("test") { // https://stackoverflow.com/questions/40954017/gradle-how-to-get-output-from-test-stderr-stdout-into-console
         useJUnitPlatform()
 
         testLogging {
@@ -182,16 +128,24 @@ tasks {
     }
 
     val copyJarToTestServer = register("copyJarToTestServer") {
-        println("copying jar to server")
-//        copyFile("build/libs/${project.properties["archives_name"]}-${project.properties["mod_version"]}.jar", project.property("testServerModsFolder") as String)
-//        copyFile("build/libs/${project.properties["archives_name"]}-${project.properties["mod_version"]}.jar", project.property("testClientModsFolder") as String)
+        println("copy to server")
+        copyFile("build/libs/ManHunt-${project.properties["mod_version"]}.jar", project.property("testServerModsFolder") as String)
     }
 
-    build { doLast { copyJarToTestServer.get() } }
+    build {
+        doLast {
+            copyJarToTestServer.get()
+        }
+    }
 
 }
 
-fun copyFile(src: String, dest: String) = copy { from(src);into(dest) }
+fun copyFile(src: String, dest: String) {
+    copy {
+        from(src)
+        into(dest)
+    }
+}
 
 fun DependencyHandlerScope.includeTransitive(
     root: ResolvedDependency?,

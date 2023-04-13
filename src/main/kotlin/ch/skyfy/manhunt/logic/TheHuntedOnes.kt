@@ -21,5 +21,4 @@ class TheHuntedOnes(game: Game) : BaseRole(game, CONFIG_DIRECTORY.resolve("start
         }
     }
 
-
 }
